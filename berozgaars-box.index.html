@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>berozgaars...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Italianno&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" xintegrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .bg-primary { background-color: #A7F3D0; } .bg-secondary { background-color: #14B8A6; }
+        .text-primary { color: #047857; } .text-secondary { color: #0D9488; }
+        .border-primary { border-color: #047857; } .border-secondary { border-color: #14B8A6; }
+        .btn-primary { background-color: #14B8A6; color: white; transition: background-color 0.3s; }
+        .btn-primary:hover { background-color: #0D9488; }
+        .btn-primary:disabled { background-color: #5eead4; cursor: not-allowed; }
+        .btn-secondary { background-color: #a7f3d0; color: #047857; transition: background-color 0.3s; }
+        .btn-secondary:hover { background-color: #6ee7b7; }
+        .nav-item.active, .tab-item.active { color: #14B8A6; border-bottom: 2px solid #14B8A6; }
+        .page, .tab-content { display: none; }
+        .page.active, .tab-content.active { display: block; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #14B8A6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+        .modal-content { background: white; padding: 1.5rem; border-radius: 0.5rem; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .auth-page { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 2rem; }
+        .passion-btn {
+            background-color: #e6fffa;
+            color: #0D9488;
+            border: 1px solid #A7F3D0;
+        }
+        .passion-btn.selected {
+            background-color: #14B8A6;
+            color: white;
+            border-color: #0D9488;
+        }
+        #messages-page, #chat-view-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Splash Screen Styles */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0D9488; /* Darker Teal for better contrast */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+        }
+        .splash-logo {
+            font-family: 'Italianno', cursive;
+            font-size: 5rem; /* Made bigger */
+            color: #A7F3D0; /* Light Green */
+            font-weight: 400;
+        }
+        .splash-logo span {
+            opacity: 0;
+            display: inline-block;
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <h1 id="splash-logo-text" class="splash-logo"></h1>
+    </div>
+
+    <div id="app-wrapper">
+        <!-- This wrapper will contain either the auth flow or the main app -->
+    </div>
+
+    <!-- Modals Container -->
+    <div id="modals-container"></div>
+
+    <script>
+        // --- MOCK DATABASE & STATE ---
+        let currentUser = null;
+        let userSearchHistory = [];
+        let userResume = { file: null, text: 'Rohan Sharma - Aspiring Software Developer. Skills: Java, Python, SQL, JavaScript. Projects: Built a college event management website.', linkedin: '', skills: [] };
+        let userJobPreferences = [];
+        const jobCategories = ['Tech', 'Marketing', 'Design', 'Finance', 'Engineering', 'Sales', 'HR'];
+
+        let userPortfolios = [
+            { title: 'My Personal Blog', url: 'https://example.blog.com' },
+            { title: 'GitHub Profile', url: 'https://github.com/rohansharma' }
+        ];
+
+        let userRecommendations = {
+            received: [
+                { from: 'Priya Patel', relationship: 'Managed Rohan directly at Tech Solutions Inc.', text: "Rohan is a highly motivated and fast-learning intern. His contributions to our flagship project were invaluable. He has a keen eye for detail and is always ready to take on new challenges. Any team would be lucky to have him.", status: 'approved' },
+                { from: 'Professor Verma', relationship: 'Rohan was a student in my Advanced Algorithms course.', text: "Rohan was one of the top performers in my class. He demonstrated a deep understanding of complex data structures and always submitted exemplary work. He has a bright future in software engineering.", status: 'pending' },
+            ],
+            given: [
+                { to: 'Aisha Khan', relationship: 'Worked with Aisha on a university project', text: "Aisha is an exceptional team player and a brilliant coder. Her ability to solve complex problems under pressure was a great asset to our team. I highly recommend her." }
+            ]
+        };
+        
+        const conversations = [
+            { id: 1, company: 'TCS', jobTitle: 'Software Engineer Role', unread: true, chat: [ { sender: 'company', text: 'Dear Rohan, Thank you for your application. We were impressed with your profile and would like to invite you for a virtual interview on July 5th at 11:00 AM. Please confirm your availability. Regards, TCS HR.', timestamp: '9:30 AM' } ] },
+            { id: 2, company: 'Accenture', jobTitle: 'Data Analyst Application', unread: false, chat: [ { sender: 'company', text: 'Dear Applicant, We have received your application for the Data Analyst position. Our team is currently reviewing profiles and we will get back to you shortly. Thank you for your interest in Accenture.', timestamp: 'Yesterday' } ] },
+            { id: 3, company: 'Social Buzz', jobTitle: 'Offer of Internship - Digital Marketing', unread: false, chat: [ { sender: 'company', text: 'Congratulations! We are pleased to offer you the position of Digital Marketing Intern at Social Buzz. Please find the detailed offer letter attached. We look forward to you joining our team!', timestamp: 'June 28' }, { sender: 'user', text: 'Thank you so much! I am thrilled to accept the offer. I will go through the offer letter and get back to you soon.', timestamp: 'June 28' } ] }
+        ];
+
+        const indianCities = ["Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Ahmedabad", "Chennai", "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", "Nagpur", "Indore", "Thane", "Bhopal", "Visakhapatnam", "Patna", "Vadodara", "Ghaziabad", "Ludhiana", "Agra", "Nashik", "Faridabad", "Meerut", "Rajkot", "Varanasi", "Srinagar", "Aurangabad", "Dhanbad", "Amritsar", "Allahabad", "Ranchi", "Howrah", "Coimbatore", "Jabalpur", "Gwalior", "Vijayawada", "Jodhpur", "Madurai", "Raipur", "Kota", "Guwahati", "Chandigarh"];
+
+        const allJobs = [
+            { id: 1, title: 'Entry Level Software Engineer', company: 'TCS', location: 'Bengaluru', salary: '₹4.5 LPA', type: 'Full-time', source: 'Naukri', applyLink: '#', details: { description: 'Seeking motivated software engineers to develop and maintain high-quality software products.', responsibilities: ['Write clean, scalable code', 'Test and deploy applications', 'Collaborate with teams'], skills: ['Java', 'Python', 'SQL', 'Git'] } },
+            { id: 2, title: 'Digital Marketing Intern', company: 'Social Buzz', location: 'Mumbai', salary: '₹15,000/month', type: 'Internship', source: 'Internshala', applyLink: '#', details: { description: 'Join our marketing team to create engaging online campaigns.', responsibilities: ['Manage social media accounts', 'Create content calendars', 'Analyze campaign performance'], skills: ['SEO', 'SEM', 'Content Writing', 'Canva'] } },
+            { id: 3, title: 'Graduate Engineer Trainee', company: 'L&T Construction', location: 'Chennai', salary: '₹6 LPA', type: 'Full-time', source: 'LinkedIn', applyLink: '#', details: { description: 'A training program for civil engineering graduates to work on large-scale infrastructure projects.', responsibilities: ['Site management', 'Project planning', 'Quality control'], skills: ['AutoCAD', 'Civil Engineering', 'Project Management'] } },
+            { id: 4, title: 'Data Analyst Fresher', company: 'Accenture', location: 'Hyderabad', salary: '₹4 LPA', type: 'Full-time', source: 'Indeed', applyLink: '#', details: { description: 'Analyze large datasets to provide actionable insights for our clients.', responsibilities: ['Data cleaning and processing', 'Creating dashboards and reports', 'Statistical analysis'], skills: ['Excel', 'SQL', 'Power BI', 'Python'] } },
+            { id: 5, title: 'Graphic Design Fresher', company: 'Design Co.', location: 'Pune', salary: '₹3.5 LPA', type: 'Full-time', source: 'Freshersworld', applyLink: '#', details: { description: 'Create visually stunning graphics for web, mobile, and print.', responsibilities: ['Designing logos and banners', 'Creating marketing materials', 'Collaborating with the marketing team'], skills: ['Adobe Photoshop', 'Illustrator', 'Figma'] } },
+            { id: 6, title: 'Business Development Executive (Sales)', company: 'Growthify', location: 'Delhi', salary: '₹4 LPA + Incentives', type: 'Full-time', source: 'Naukri', applyLink: '#', details: { description: 'Drive business growth by identifying and acquiring new clients.', responsibilities: ['Lead generation', 'Client presentations', 'Negotiating contracts'], skills: ['Communication', 'Sales', 'CRM'] } },
+            { id: 7, title: 'Associate Software Developer', company: 'Infosys', location: 'Pune', salary: '₹4.2 LPA', type: 'Full-time', source: 'Careers', applyLink: '#', details: { description: 'Be part of a team that designs, develops and supports activities for software applications.', responsibilities: ['Coding and debugging', 'Software lifecycle management', 'Working in an Agile team'], skills: ['C#', '.NET', 'Cloud Basics'] } },
+            { id: 8, title: 'Human Resources (HR) Intern', company: 'PeopleFirst HR', location: 'Gurugram', salary: '₹12,000/month', type: 'Internship', source: 'Internshala', applyLink: '#', details: { description: 'Assist with daily HR functions and duties.', responsibilities: ['Recruitment support', 'Onboarding new hires', 'Maintaining employee records'], skills: ['MS Office', 'Communication', 'HR Principles'] } },
+            { id: 9, title: 'Financial Analyst - Entry Level', company: 'Goldman Sachs', location: 'Bengaluru', salary: 'Competitive', type: 'Full-time', source: 'Careers', applyLink: '#', details: { description: 'Provide analytical support for investment banking activities.', responsibilities: ['Financial modeling', 'Market research', 'Preparing presentations'], skills: ['Finance', 'Excel', 'Valuation'] } },
+            { id: 10, title: 'UI/UX Design Intern', company: 'PixelPerfect', location: 'Remote', salary: '₹18,000/month', type: 'Internship', source: 'LinkedIn', applyLink: '#', details: { description: 'Help create intuitive and beautiful user interfaces for our mobile apps.', responsibilities: ['Wireframing and prototyping', 'User research', 'Creating design systems'], skills: ['Figma', 'UI/UX', 'Prototyping'] } },
+            { id: 11, title: 'Mechanical Engineer Fresher', company: 'Tata Motors', location: 'Pune', salary: '₹5.5 LPA', type: 'Full-time', source: 'Careers', applyLink: '#', details: { description: 'Join our automotive design and manufacturing team.', responsibilities: ['CAD modeling', 'Product testing', 'Process improvement'], skills: ['SolidWorks', 'CATIA', 'Mechanical Engineering'] } },
+            { id: 12, title: 'Content Writer (Fresher)', company: 'WriteRight', location: 'Kolkata', salary: '₹2.5 LPA', type: 'Full-time', source: 'Indeed', applyLink: '#', details: { description: 'Create compelling blog posts, articles, and social media content.', responsibilities: ['Researching industry topics', 'Writing clear marketing copy', 'Proofreading and editing'], skills: ['English Proficiency', 'Content Writing', 'SEO'] } },
+        ];
+        
+        // --- INITIALIZATION ---
+        window.onload = () => {
+            // Animate splash screen text
+            const logoText = document.getElementById('splash-logo-text');
+            const text = "berozgaars";
+            text.split('').forEach((char, index) => {
+                const span = document.createElement('span');
+                span.textContent = char;
+                span.style.animationDelay = `${index * 0.15}s`;
+                logoText.appendChild(span);
+            });
+
+            // Check for logged-in user
+            if (localStorage.getItem('currentUser')) {
+                currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                userJobPreferences = JSON.parse(localStorage.getItem('userJobPreferences')) || [];
+                document.getElementById('splash-screen').style.display = 'none';
+                renderMainApp();
+            } else {
+                setTimeout(() => {
+                    const splash = document.getElementById('splash-screen');
+                    splash.style.opacity = '0';
+                    setTimeout(() => {
+                        splash.style.display = 'none';
+                        renderAuthFlow();
+                    }, 500);
+                }, 2500);
+            }
+            requestLocationPermission();
+        };
+
+        // --- AUTHENTICATION FLOW ---
+        function renderAuthFlow() { 
+            const appWrapper = document.getElementById('app-wrapper');
+            appWrapper.innerHTML = `<div id="auth-container" class="max-w-md mx-auto bg-white"></div>`;
+            renderLoginPage();
+        }
+        function renderLoginPage() { 
+            const authContainer = document.getElementById('auth-container');
+            authContainer.innerHTML = `<div class="auth-page"><h1 class="text-4xl font-bold text-primary mb-2" style="font-family: 'Italianno', cursive;">berozgaars</h1><p class="text-gray-600 mb-8">Find your first job, today.</p><form id="login-form" class="w-full"><div class="mb-4"><label class="block text-gray-700">Email</label><input type="email" id="login-email" class="w-full p-3 border rounded-lg" required value="rohan.sharma@example.com"></div><div class="mb-6"><label class="block text-gray-700">Password</label><input type="password" id="login-password" class="w-full p-3 border rounded-lg" required value="password"></div><button type="submit" class="w-full btn-primary font-bold py-3 rounded-lg mb-4">Login</button><p class="text-center">Don't have an account? <a href="#" id="show-signup" class="text-secondary font-semibold">Sign Up</a></p></form></div>`;
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('show-signup').addEventListener('click', (e) => { e.preventDefault(); renderSignupPage(); });
+        }
+        function renderSignupPage() { 
+             const authContainer = document.getElementById('auth-container');
+             authContainer.innerHTML = `<div class="auth-page"><h1 class="text-3xl font-bold text-primary mb-6">Create Account</h1><form id="signup-form" class="w-full"><div class="mb-4"><label class="block text-gray-700">Full Name</label><input type="text" id="signup-name" class="w-full p-3 border rounded-lg" required></div><div class="mb-4"><label class="block text-gray-700">Email</label><input type="email" id="signup-email" class="w-full p-3 border rounded-lg" required></div><div class="mb-6"><label class="block text-gray-700">Password</label><input type="password" id="signup-password" class="w-full p-3 border rounded-lg" required></div><button type="submit" class="w-full btn-primary font-bold py-3 rounded-lg mb-4">Sign Up</button><p class="text-center">Already have an account? <a href="#" id="show-login" class="text-secondary font-semibold">Login</a></p></form></div>`;
+            document.getElementById('signup-form').addEventListener('submit', handleSignup);
+            document.getElementById('show-login').addEventListener('click', (e) => { e.preventDefault(); renderLoginPage(); });
+        }
+        function handleLogin(e) { e.preventDefault(); const name = document.getElementById('login-email').value.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase()); currentUser = { name: name || "Rohan Sharma", email: document.getElementById('login-email').value }; localStorage.setItem('currentUser', JSON.stringify(currentUser)); renderMainApp(); }
+        function handleSignup(e) { e.preventDefault(); currentUser = { name: document.getElementById('signup-name').value, email: document.getElementById('signup-email').value }; localStorage.setItem('currentUser', JSON.stringify(currentUser)); renderMainApp(); }
+        function handleLogout() { currentUser = null; userJobPreferences = []; localStorage.clear(); renderAuthFlow(); }
+
+        // --- MAIN APPLICATION ---
+        function renderMainApp() {
+            const appWrapper = document.getElementById('app-wrapper');
+            appWrapper.innerHTML = `
+                <div id="app-container" class="max-w-md mx-auto bg-white shadow-lg rounded-lg overflow-hidden min-h-screen flex flex-col">
+                    <main id="main-content" class="flex-grow pb-20">
+                        <!-- Pages will be rendered here by the router -->
+                    </main>
+                    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t flex justify-around">
+                        <a href="#home" data-page="home-page" class="nav-item active flex-1 text-center py-3"><i class="fas fa-home"></i><span class="block text-xs">Home</span></a>
+                        <a href="#my-jobs" data-page="my-jobs-page" class="nav-item flex-1 text-center py-3 text-gray-500"><i class="fas fa-bookmark"></i><span class="block text-xs">My Jobs</span></a>
+                        <a href="#messages" data-page="messages-page" class="nav-item flex-1 text-center py-3 text-gray-500"><i class="fas fa-comment-dots"></i><span class="block text-xs">Messages</span></a>
+                        <a href="#profile" data-page="profile-page" class="nav-item flex-1 text-center py-3 text-gray-500"><i class="fas fa-user"></i><span class="block text-xs">Profile</span></a>
+                    </nav>
+                </div>
+            `;
+            navigateTo('home-page');
+            document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', e => { 
+                e.preventDefault(); 
+                navigateTo(item.dataset.page); 
+            }));
+        }
+        
+        // --- NAVIGATION ROUTER ---
+        function navigateTo(pageId) {
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = getPageContent(pageId);
+            
+            switch(pageId) {
+                case 'home-page': setupHomePageListeners(); break;
+                case 'resume-page': setupResumePageListeners(); break;
+                case 'suggestions-page': setupSuggestionsPageListeners(); break;
+                case 'resume-jobs-page': setupResumeJobsPageListeners(); break;
+                case 'my-jobs-page': renderMyJobsContent(); break;
+                case 'messages-page': renderMessagesContent(); break;
+                case 'profile-page': renderProfileContent(); break;
+            }
+
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.page === pageId);
+                item.classList.toggle('text-gray-500', item.dataset.page !== pageId);
+            });
+        }
+
+        function getPageContent(pageId) {
+            const padding = (pageId === 'chat-view-container') ? '' : 'p-4';
+            return `<div id="${pageId}-content" class="${padding}">${getPageHTML(pageId)}</div>`;
+        }
+
+        function getPageHTML(pageId) {
+            switch(pageId) {
+                case 'home-page': return `<header class="sticky top-0 bg-white z-10 pt-4 -mx-4 px-4 pb-3 border-b"><div class="flex justify-between items-center"> <h1 class="text-2xl font-bold text-primary">berozgaars...</h1> <i class="fas fa-bell text-gray-500 text-xl"></i> </div></header><div class="pt-4"><div class="relative mb-4"> <input type="text" id="job-search-input" placeholder="Job title, skills, or company" class="w-full p-3 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"> <i class="fas fa-search absolute left-3 top-3.5 text-gray-400"></i> </div> <div class="relative mb-4"> <input type="text" list="indian-cities" id="city-search-input" placeholder="Enter city or locality" class="w-full p-3 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"> <i class="fas fa-map-marker-alt absolute left-3 top-3.5 text-gray-400"></i> <datalist id="indian-cities"></datalist> </div> <button id="show-resume-upload" class="w-full bg-primary text-primary font-bold py-3 px-4 rounded-lg mb-6 flex items-center justify-center hover:bg-green-200 transition-colors"> <i class="fas fa-rocket mr-2"></i> Boost Your Profile with AI </button> <div id="passion-selection-section" class="mb-6 p-3 bg-teal-50 rounded-lg"> <h3 class="text-base font-semibold text-gray-800 mb-2">What are you passionate about?</h3> <p class="text-xs text-gray-600 mb-3">Select a few fields to get better recommendations.</p> <div id="passion-buttons" class="flex flex-wrap gap-2"></div> </div> <div id="recommendations-section" class="mb-8"> <h2 class="text-xl font-semibold text-gray-800 mb-3">Recommended for You</h2> <div id="job-listings-recommended" class="space-y-4"></div> </div> <div> <h2 class="text-xl font-semibold text-gray-800 mb-3">All Entry-Level Jobs</h2> <div id="job-listings-all" class="space-y-4"></div></div></div>`;
+                case 'resume-page': return `<header class="sticky top-0 bg-white z-10 pt-4 -mx-4 px-4 pb-3 border-b"><h1 class="text-2xl font-bold text-primary">AI Resume Analyzer</h1></header><div class="pt-4"><p class="text-gray-600 mb-6">Upload your resume and LinkedIn profile. Our Gemini-powered AI will provide suggestions to supercharge your job hunt.</p><div class="mb-6"><label class="block text-lg font-medium text-gray-700 mb-2">Upload Resume</label><div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"><div class="space-y-1 text-center"><i class="fas fa-file-pdf mx-auto h-12 w-12 text-gray-400"></i><div class="flex text-sm text-gray-600"><label for="resume-file" class="relative cursor-pointer bg-white rounded-md font-medium text-secondary hover:text-primary focus-within:outline-none"><span>Upload a file</span><input id="resume-file" type="file" class="sr-only"></label><p class="pl-1">or drag and drop</p></div><p class="text-xs text-gray-500">PDF, DOC, DOCX up to 10MB</p><p id="file-name" class="text-sm text-green-600 font-semibold"></p></div></div></div><div class="mb-6"><label class="block text-lg font-medium text-gray-700 mb-2">LinkedIn Profile URL</label><input type="url" id="linkedin-url" placeholder="https://linkedin.com/in/your-profile" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"></div><button id="get-suggestions-btn" class="w-full btn-primary font-bold py-3 px-4 rounded-lg flex items-center justify-center"><i class="fas fa-lightbulb mr-2"></i> Get AI Suggestions</button></div>`;
+                case 'suggestions-page': return `<header class="sticky top-0 bg-white z-10 pt-4 -mx-4 px-4 pb-3 border-b"><h1 class="text-2xl font-bold text-primary">AI Suggestions</h1></header><div class="pt-4"><div id="suggestions-loader" class="flex justify-center items-center h-40"><div class="loader"></div></div><div id="suggestions-content" class="hidden"><p class="text-gray-600 mb-6">Here are some suggestions to improve your resume and LinkedIn profile:</p><div id="suggestions-list" class="space-y-4 mb-6"></div><button id="find-jobs-btn" class="w-full btn-primary font-bold py-3 px-4 rounded-lg">Find Jobs for My Profile</button></div></div>`;
+                case 'resume-jobs-page': return `<header class="sticky top-0 bg-white z-10 pt-4 -mx-4 px-4 pb-3 border-b"><h1 class="text-2xl font-bold text-primary">Jobs For You</h1></header><div class="pt-4"><p class="text-gray-600 mb-6">Based on our AI analysis, these entry-level jobs seem like a great fit for you.</p><div id="resume-jobs-loader" class="flex justify-center items-center h-40"><div class="loader"></div></div><div id="job-listings-resume" class="space-y-4"></div></div>`;
+                case 'my-jobs-page': return `<div id="my-jobs-content-wrapper"></div>`;
+                case 'messages-page': return `<div id="messages-content-wrapper"></div>`;
+                case 'profile-page': return `<div id="profile-content-wrapper"></div>`;
+                default: return '';
+            }
+        }
+
+        // --- PAGE-SPECIFIC SETUP FUNCTIONS ---
+        function setupHomePageListeners() {
+            populateCities();
+            renderPassionSelector();
+            renderJobs(allJobs, 'job-listings-all');
+            renderRecommendedJobs();
+            document.getElementById('job-search-input').addEventListener('input', handleSearch);
+            document.getElementById('city-search-input').addEventListener('input', handleSearch);
+            document.getElementById('show-resume-upload').addEventListener('click', () => navigateTo('resume-page'));
+        }
+
+        function setupResumePageListeners() {
+            document.getElementById('resume-file').addEventListener('change', handleFileSelect);
+            document.getElementById('get-suggestions-btn').addEventListener('click', getResumeSuggestions);
+        }
+        
+        function setupSuggestionsPageListeners(suggestions) {
+            const loader = document.getElementById('suggestions-loader');
+            const content = document.getElementById('suggestions-content');
+            const list = document.getElementById('suggestions-list');
+            list.innerHTML = '';
+            suggestions.forEach(s => {
+                list.innerHTML += `<div class="flex items-start p-3 bg-gray-100 rounded-lg"><i class="${s.icon} text-secondary text-xl w-8 text-center mt-1"></i><p class="ml-3 text-gray-700">${s.text}</p></div>`;
+            });
+            loader.style.display = 'none';
+            content.classList.remove('hidden');
+            document.getElementById('find-jobs-btn').addEventListener('click', findJobsForResume);
+        }
+
+        function setupResumeJobsPageListeners(matchedJobs) {
+            const loader = document.getElementById('resume-jobs-loader');
+            loader.style.display = 'none';
+            renderJobs(matchedJobs, 'job-listings-resume');
+        }
+
+        // --- CORE LOGIC ---
+        function handleSearch() { 
+            const query = document.getElementById('job-search-input').value.toLowerCase();
+            const city = document.getElementById('city-search-input').value.toLowerCase();
+            if (query.length > 2 && !userSearchHistory.includes(query)) { userSearchHistory.push(query); }
+            const filteredJobs = allJobs.filter(job => {
+                const searchCorpus = `${job.title} ${job.company} ${job.details.skills.join(' ')}`.toLowerCase();
+                return searchCorpus.includes(query) && job.location.toLowerCase().includes(city);
+            });
+            renderJobs(filteredJobs, 'job-listings-all');
+            renderRecommendedJobs();
+        }
+
+        function renderJobs(jobs, containerId) { 
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = jobs.length ? '' : '<p class="text-gray-500 text-center p-4">No jobs found.</p>';
+            jobs.forEach(job => {
+                const jobCard = document.createElement('div');
+                jobCard.className = 'p-4 border rounded-lg bg-white shadow-sm cursor-pointer hover:shadow-md transition-all duration-300';
+                jobCard.innerHTML = `<div class="flex justify-between items-start"><h3 class="text-lg font-bold text-secondary">${job.title}</h3><span class="text-xs font-semibold ${job.source === 'Careers' ? 'bg-blue-100 text-blue-800' : 'bg-gray-200 text-gray-600'} px-2 py-1 rounded-full">${job.source}</span></div><p class="font-semibold text-gray-700">${job.company}</p><p class="text-sm text-gray-500 mb-2">${job.location}</p><p class="text-sm font-semibold text-green-600 mb-3">${job.salary}</p>`;
+                jobCard.addEventListener('click', () => openJobDetailsModal(job.id));
+                container.appendChild(jobCard);
+            });
+        }
+
+        function renderRecommendedJobs() {
+            const container = document.getElementById('job-listings-recommended');
+            if (!container) return;
+            let recommendations = [];
+            const recommendedSet = new Set();
+            const preferenceKeywords = {
+                'Tech': ['software', 'engineer', 'developer', 'python', 'java', 'react', 'data'],
+                'Marketing': ['marketing', 'seo', 'sem', 'content', 'social media'],
+                'Design': ['design', 'illustrator', 'figma', 'photoshop', 'ui/ux'],
+                'Finance': ['analyst', 'finance', 'accounting', 'audit'],
+                'Engineering': ['civil', 'mechanical', 'electrical', 'trainee', 'autocad'],
+                'Sales': ['sales', 'bde', 'business development', 'client'],
+                'HR': ['hr', 'human resources', 'recruitment']
+            };
+
+            if (userJobPreferences.length > 0) {
+                userJobPreferences.forEach(pref => {
+                    const keywords = preferenceKeywords[pref] || [pref.toLowerCase()];
+                    allJobs.forEach(job => {
+                        const searchCorpus = `${job.title} ${job.details.description} ${job.details.skills.join(' ')}`.toLowerCase();
+                        if (keywords.some(kw => searchCorpus.includes(kw))) {
+                            recommendedSet.add(job);
+                        }
+                    });
+                });
+            }
+
+            if (userSearchHistory.length > 0) {
+                userSearchHistory.forEach(term => {
+                    allJobs.forEach(job => {
+                        const searchCorpus = `${job.title} ${job.details.skills.join(' ')}`.toLowerCase();
+                        if (searchCorpus.includes(term)) recommendedSet.add(job);
+                    });
+                });
+            }
+
+            if (recommendedSet.size === 0) {
+                 allJobs.filter(job => job.title.toLowerCase().includes('software')).slice(0, 2).forEach(job => recommendedSet.add(job));
+            }
+
+            recommendations = Array.from(recommendedSet).slice(0, 4);
+
+            if (recommendations.length > 0) renderJobs(recommendations, 'job-listings-recommended');
+            else container.innerHTML = '<p class="text-gray-500 text-center p-4">Select your passions to get personalized recommendations.</p>';
+        }
+        
+        function renderPassionSelector() {
+            const container = document.getElementById('passion-buttons');
+            if (!container) return;
+            container.innerHTML = '';
+            jobCategories.forEach(cat => {
+                const isSelected = userJobPreferences.includes(cat);
+                const button = document.createElement('button');
+                button.className = `passion-btn font-semibold py-1 px-3 text-sm rounded-full transition-colors ${isSelected ? 'selected' : ''}`;
+                button.textContent = cat;
+                button.dataset.passion = cat;
+                button.addEventListener('click', () => handlePassionSelect(cat));
+                container.appendChild(button);
+            });
+        }
+
+        function handlePassionSelect(passion) {
+            const index = userJobPreferences.indexOf(passion);
+            if (index > -1) {
+                userJobPreferences.splice(index, 1);
+            } else {
+                userJobPreferences.push(passion);
+            }
+            localStorage.setItem('userJobPreferences', JSON.stringify(userJobPreferences));
+            renderPassionSelector();
+            renderRecommendedJobs();
+        }
+
+        function handleFileSelect(e) { if (e.target.files.length > 0) { userResume.file = e.target.files[0]; document.getElementById('file-name').textContent = userResume.file.name; const reader = new FileReader(); reader.onload = (event) => { userResume.text = event.target.result; }; reader.readAsText(userResume.file); } }
+        
+        // --- GEMINI API INTEGRATION ---
+        async function getResumeSuggestions() {
+            const getSuggestionsBtn = document.getElementById('get-suggestions-btn');
+            userResume.linkedin = document.getElementById('linkedin-url').value;
+            if (!userResume.text) {
+                alert('Please upload your resume first.');
+                return;
+            }
+            
+            getSuggestionsBtn.disabled = true;
+            getSuggestionsBtn.innerHTML = `<div class="loader !w-6 !h-6 !border-2"></div>`;
+
+            navigateTo('suggestions-page');
+            
+            const prompt = `Analyze the following resume and LinkedIn profile for an entry-level job seeker in India. Provide 4 actionable suggestions for improvement and a list of up to 5 key skills extracted from the resume. Return a single JSON object with two keys: "suggestions" and "skills". The "suggestions" key should have an array of objects, where each object has an "icon" and a "text" field. For the 'icon' field, choose one of these Font Awesome classes: 'fas fa-bullseye', 'fas fa-star', 'fas fa-keyboard', 'fab fa-linkedin'. The "skills" key should have an array of strings. Resume: "${userResume.text}". LinkedIn: "${userResume.linkedin}".`;
+
+            try {
+                const apiKey = "AIzaSyA3Qs8RJb7U-Cqr7s_jppqybiD9Nrx9e1s";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                "suggestions": {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            "icon": { "type": "STRING" },
+                                            "text": { "type": "STRING" }
+                                        },
+                                        required: ["icon", "text"]
+                                    }
+                                },
+                                "skills": {
+                                    type: "ARRAY",
+                                    items: { "type": "STRING" }
+                                }
+                            },
+                            required: ["suggestions", "skills"]
+                        }
+                    }
+                };
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts.length > 0) {
+                    const aiResponse = JSON.parse(result.candidates[0].content.parts[0].text);
+                    userResume.skills = aiResponse.skills || []; // Store extracted skills
+                    setupSuggestionsPageListeners(aiResponse.suggestions);
+                } else {
+                    throw new Error("Invalid response structure from AI.");
+                }
+            } catch (error) {
+                console.error("AI Suggestions Error:", error);
+                const fallbackSuggestions = [ { icon: 'fas fa-exclamation-triangle', text: "Could not get AI suggestions. Please check the API key or try again later." } ];
+                setupSuggestionsPageListeners(fallbackSuggestions);
+            } finally {
+                 const btn = document.getElementById('get-suggestions-btn');
+                 if(btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fas fa-lightbulb mr-2"></i> Get AI Suggestions`;
+                 }
+            }
+        }
+
+        function findJobsForResume() {
+            navigateTo('resume-jobs-page');
+            // No new API call needed, we use the skills extracted earlier
+            const resumeKeywords = userResume.skills;
+            let matchedJobs = [];
+
+            if (resumeKeywords && resumeKeywords.length > 0) {
+                 matchedJobs = allJobs.filter(job => {
+                    const searchCorpus = `${job.title} ${job.details.description} ${job.details.skills.join(' ')}`.toLowerCase();
+                    return resumeKeywords.some(kw => searchCorpus.includes(kw.toLowerCase()));
+                });
+            }
+            
+            // If no jobs match or no skills were extracted, provide a fallback
+            if (matchedJobs.length === 0) {
+                matchedJobs = allJobs.slice(0, 5); 
+            }
+            
+            setupResumeJobsPageListeners(matchedJobs);
+        }
+        
+        function requestLocationPermission() { console.log("Requesting user location permission..."); }
+        
+        function openJobDetailsModal(jobId) { 
+            const job = allJobs.find(j => j.id === jobId); 
+            if (!job) return; 
+            const content = `
+                <div class="pb-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <h2 class="text-2xl font-bold text-secondary">${job.title}</h2>
+                        <span class="text-sm font-semibold ${job.source === 'Careers' ? 'bg-blue-100 text-blue-800' : 'bg-gray-200 text-gray-600'} px-2 py-1 rounded-full">${job.source}</span>
+                    </div>
+                    <p class="text-lg font-semibold text-gray-800">${job.company}</p>
+                    <p class="text-gray-600 mb-2">${job.location}</p>
+                    <p class="text-lg font-bold text-green-700 mb-4">${job.salary}</p>
+                    
+                    <h3 class="font-bold text-gray-800 mt-4 mb-2">Job Description</h3>
+                    <p class="text-gray-600">${job.details.description}</p>
+                    
+                    <h3 class="font-bold text-gray-800 mt-4 mb-2">Responsibilities</h3>
+                    <ul class="list-disc list-inside text-gray-600 space-y-1">${job.details.responsibilities.map(r => `<li>${r}</li>`).join('')}</ul>
+                    
+                    <h3 class="font-bold text-gray-800 mt-4 mb-2">Required Skills</h3>
+                    <div class="flex flex-wrap gap-2">${job.details.skills.map(s => `<span class="bg-primary text-primary text-sm font-medium px-3 py-1 rounded-full">${s}</span>`).join('')}</div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
+                        <button onclick="prepareForInterview(${job.id})" class="w-full btn-secondary font-bold py-3 px-4 rounded-lg flex items-center justify-center">✨ Prepare for Interview</button>
+                        <button onclick="draftCoverLetter(${job.id})" class="w-full btn-secondary font-bold py-3 px-4 rounded-lg flex items-center justify-center">✨ Draft Cover Letter</button>
+                    </div>
+
+                    <a href="${job.applyLink}" target="_blank" class="block w-full text-center btn-primary font-bold py-3 rounded-lg mt-3">
+                        Apply Now on ${job.source} <i class="fas fa-external-link-alt ml-2"></i>
+                    </a>
+                </div>`; 
+            openModal('Job Details', content); 
+        }
+
+        async function prepareForInterview(jobId) {
+            const job = allJobs.find(j => j.id === jobId);
+            const modalContent = `<div id="interview-prep-loader" class="flex justify-center items-center h-40"><div class="loader"></div></div><div id="interview-prep-content"></div>`;
+            openModal(`Interview Prep: ${job.title}`, modalContent);
+
+            const prompt = `I am a student in India preparing for an entry-level job interview for the position of "${job.title}" at "${job.company}". The job description is: "${job.details.description}". The required skills are: "${job.details.skills.join(', ')}". Please generate a list of likely interview questions and tips for me. Structure the response as a JSON object with three keys: "behavioral_questions", "technical_questions", and "questions_to_ask". Each key should contain an array of 3-4 relevant questions as strings.`;
+
+            try {
+                const apiKey = "AIzaSyA3Qs8RJb7U-Cqr7s_jppqybiD9Nrx9e1s";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                "behavioral_questions": { type: "ARRAY", items: { type: "STRING" } },
+                                "technical_questions": { type: "ARRAY", items: { type: "STRING" } },
+                                "questions_to_ask": { type: "ARRAY", items: { type: "STRING" } }
+                            },
+                            required: ["behavioral_questions", "technical_questions", "questions_to_ask"]
+                        }
+                    }
+                };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
+                
+                const prepContent = document.getElementById('interview-prep-content');
+                prepContent.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-bold text-lg text-secondary mb-2">💡 Behavioral Questions</h4>
+                            <ul class="list-disc list-inside text-gray-700 space-y-1">${data.behavioral_questions.map(q => `<li>${q}</li>`).join('')}</ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg text-secondary mb-2">💻 Technical Questions</h4>
+                            <ul class="list-disc list-inside text-gray-700 space-y-1">${data.technical_questions.map(q => `<li>${q}</li>`).join('')}</ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg text-secondary mb-2">🤔 Questions You Can Ask</h4>
+                            <ul class="list-disc list-inside text-gray-700 space-y-1">${data.questions_to_ask.map(q => `<li>${q}</li>`).join('')}</ul>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('interview-prep-loader').style.display = 'none';
+
+            } catch (error) {
+                console.error("Interview Prep Error:", error);
+                document.getElementById('interview-prep-content').innerHTML = `<p class="text-red-500">Could not generate interview prep. Please try again later.</p>`;
+                document.getElementById('interview-prep-loader').style.display = 'none';
+            }
+        }
+
+        async function draftCoverLetter(jobId) {
+            const job = allJobs.find(j => j.id === jobId);
+            const modalContent = `<div id="cover-letter-loader" class="flex justify-center items-center h-40"><div class="loader"></div></div><div id="cover-letter-content" class="hidden"><textarea id="cover-letter-text" class="w-full h-64 p-2 border rounded-md"></textarea><button id="copy-cover-letter" class="btn-primary w-full mt-2 py-2 rounded-lg">Copy Text</button></div>`;
+            openModal(`Cover Letter Draft: ${job.title}`, modalContent);
+
+            const prompt = `I am a student in India named "${currentUser.name}" applying for the position of "${job.title}" at "${job.company}". My resume summary is: "${userResume.text}". Please write a professional and concise cover letter for me. The letter should be enthusiastic and tailored to the job description: "${job.details.description}".`;
+
+            try {
+                const apiKey = "AIzaSyA3Qs8RJb7U-Cqr7s_jppqybiD9Nrx9e1s";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const coverLetterText = result.candidates[0].content.parts[0].text;
+                
+                document.getElementById('cover-letter-loader').style.display = 'none';
+                const contentDiv = document.getElementById('cover-letter-content');
+                contentDiv.classList.remove('hidden');
+                document.getElementById('cover-letter-text').value = coverLetterText;
+                document.getElementById('copy-cover-letter').addEventListener('click', () => {
+                    const textArea = document.getElementById('cover-letter-text');
+                    textArea.select();
+                    document.execCommand('copy');
+                    alert('Cover letter copied to clipboard!');
+                });
+
+            } catch (error) {
+                console.error("Cover Letter Error:", error);
+                document.getElementById('cover-letter-content').innerHTML = `<p class="text-red-500">Could not generate cover letter. Please try again later.</p>`;
+                document.getElementById('cover-letter-loader').style.display = 'none';
+                document.getElementById('cover-letter-content').classList.remove('hidden');
+            }
+        }
+
+        function openModal(title, content) { const modalsContainer = document.getElementById('modals-container'); modalsContainer.innerHTML = `<div class="modal-overlay" id="modal-overlay"><div class="modal-content"><div class="flex justify-between items-center mb-4 border-b pb-2"><h2 class="text-xl font-bold text-primary">${title}</h2><button id="close-modal-btn" class="text-gray-500 text-2xl hover:text-gray-800">&times;</button></div><div>${content}</div></div></div>`; document.getElementById('close-modal-btn').addEventListener('click', closeModal); document.getElementById('modal-overlay').addEventListener('click', (e) => { if (e.target.id === 'modal-overlay') closeModal(); }); }
+        function closeModal() { document.getElementById('modals-container').innerHTML = ''; }
+        function populateCities() { const datalist = document.getElementById('indian-cities'); if (!datalist) return; datalist.innerHTML = ''; indianCities.forEach(city => { const option = document.createElement('option'); option.value = city; datalist.appendChild(option); }); }
+        
+        function renderProfileContent() {
+            const wrapper = document.getElementById('profile-content-wrapper');
+            if (!wrapper) return;
+            wrapper.innerHTML = `
+                <header class="sticky top-0 bg-white z-10 pt-4 -mx-4 px-4 pb-3 border-b"><h1 class="text-2xl font-bold text-primary">Profile</h1></header>
+                <div class="pt-4">
+                    <div class="flex items-center mb-6"> <div class="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-white text-3xl font-bold mr-4">${currentUser.name.charAt(0)}</div> <div> <h2 class="text-2xl font-bold text-gray-800">${currentUser.name}</h2> <p class="text-gray-500">Kolkata, West Bengal, India</p> <p class="text-sm text-secondary">Aspiring Software Developer</p> </div> </div> <div class="mb-8"> <div class="flex justify-between items-center mb-3"> <h3 class="text-xl font-semibold text-gray-800">Portfolios & Projects</h3> <button id="add-portfolio-btn" class="text-secondary hover:text-primary"><i class="fas fa-plus-circle text-2xl"></i></button> </div> <div id="portfolio-list" class="space-y-3"></div> </div> <div> <h3 class="text-xl font-semibold text-gray-800 mb-3">Recommendations</h3> <div class="flex mb-4 border-b"> <button class="tab-item active flex-1 p-3 font-semibold" data-tab="received">Received</button> <button class="tab-item flex-1 p-3 font-semibold text-gray-500" data-tab="given">Given</button> </div> <div id="received-tab" class="tab-content active"> <button id="request-rec-btn" class="w-full border-2 border-dashed border-gray-300 text-gray-500 rounded-lg py-3 mb-4 hover:bg-gray-50">Request a recommendation</button> <div id="recommendations-received-list" class="space-y-4"></div> </div> <div id="given-tab" class="tab-content"> <div id="recommendations-given-list" class="space-y-4"></div> </div> </div>
+                    <div class="mt-8 border-t pt-4">
+                        <button onclick="handleLogout()" class="w-full text-left text-red-600 font-semibold p-3 hover:bg-red-50 rounded-lg"><i class="fas fa-sign-out-alt w-6 mr-2"></i>Logout</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('add-portfolio-btn').addEventListener('click', openPortfolioModal);
+            document.getElementById('request-rec-btn').addEventListener('click', openRequestRecModal);
+            document.querySelectorAll('.tab-item').forEach(item => item.addEventListener('click', (e) => {
+                const tabId = e.target.dataset.tab;
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active', 'text-secondary'));
+                e.target.classList.add('active', 'text-secondary');
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            }));
+
+            renderPortfolios();
+            renderRecommendations();
+        }
+
+        function renderPortfolios() {
+            const list = document.getElementById('portfolio-list');
+            if (!list) return;
+            list.innerHTML = '';
+            userPortfolios.forEach((p, index) => {
+                const item = document.createElement('div');
+                item.className = 'bg-gray-50 p-3 rounded-lg flex items-center justify-between';
+                item.innerHTML = `<div class="flex items-center"><div class="w-10 h-10 bg-secondary text-white flex items-center justify-center rounded-md mr-4"><i class="fas fa-link"></i></div><div><p class="font-semibold text-gray-800">${p.title}</p><a href="${p.url}" target="_blank" class="text-sm text-blue-600 hover:underline">${p.url}</a></div></div><button class="text-gray-400 hover:text-red-500" onclick="deletePortfolio(${index})"><i class="fas fa-trash"></i></button>`;
+                list.appendChild(item);
+            });
+        }
+        
+        function deletePortfolio(index) {
+            userPortfolios.splice(index, 1);
+            renderPortfolios();
+        }
+
+        function renderRecommendations() {
+            const receivedList = document.getElementById('recommendations-received-list');
+            const givenList = document.getElementById('recommendations-given-list');
+            if (!receivedList || !givenList) return;
+
+            receivedList.innerHTML = '';
+            userRecommendations.received.forEach(rec => {
+                if (rec.status !== 'approved') return;
+                const item = document.createElement('div');
+                item.className = 'p-4 border rounded-lg';
+                item.innerHTML = `<div class="flex items-start"><div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-xl font-bold text-primary mr-4">${rec.from.charAt(0)}</div><div><p class="font-bold text-gray-800">${rec.from}</p><p class="text-sm text-gray-500">${rec.relationship}</p></div></div><p class="mt-3 text-gray-600">"${rec.text}"</p>`;
+                receivedList.appendChild(item);
+            });
+             if (receivedList.innerHTML === '') receivedList.innerHTML = `<p class="text-center text-gray-500 py-4">No recommendations to show.</p>`;
+
+            givenList.innerHTML = '';
+            userRecommendations.given.forEach(rec => {
+                const item = document.createElement('div');
+                item.className = 'p-4 border rounded-lg';
+                item.innerHTML = `<div class="flex items-start"><div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-600 mr-4">${rec.to.charAt(0)}</div><div><p class="font-bold text-gray-800">${rec.to}</p><p class="text-sm text-gray-500">${rec.relationship}</p></div></div><p class="mt-3 text-gray-600">"${rec.text}"</p>`;
+                givenList.appendChild(item);
+            });
+             if (givenList.innerHTML === '') givenList.innerHTML = `<p class="text-center text-gray-500 py-4">You haven't given any recommendations yet.</p>`;
+        }
+
+        function openPortfolioModal() {
+            const content = `<form id="portfolio-form"><div class="mb-4"><label for="portfolio-title" class="block text-sm font-medium text-gray-700">Title</label><input type="text" id="portfolio-title" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="e.g., My Design Work" required></div><div class="mb-4"><label for="portfolio-url" class="block text-sm font-medium text-gray-700">URL</label><input type="url" id="portfolio-url" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="https://..." required></div><button type="submit" class="w-full btn-primary font-bold py-2 px-4 rounded-lg">Add Portfolio</button></form>`;
+            openModal('Add Portfolio/Project Link', content);
+            document.getElementById('portfolio-form').addEventListener('submit', (e) => { e.preventDefault(); addPortfolio(); });
+        }
+
+        function addPortfolio() {
+            const title = document.getElementById('portfolio-title').value;
+            const url = document.getElementById('portfolio-url').value;
+            userPortfolios.push({ title, url });
+            renderPortfolios();
+            closeModal();
+        }
+
+        function openRequestRecModal() {
+            const content = `<form id="request-rec-form"><div class="mb-4"><label for="rec-from" class="block text-sm font-medium text-gray-700">Who do you want to ask?</label><input type="text" id="rec-from" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="e.g., Priya Patel" required></div><div class="mb-4"><label for="rec-message" class="block text-sm font-medium text-gray-700">Include a personal message</label><textarea id="rec-message" rows="4" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="Hi Priya, would you be able to write me a brief recommendation about our time working together at...?"></textarea></div><button type="submit" class="w-full btn-primary font-bold py-2 px-4 rounded-lg">Send Request</button></form>`;
+            openModal('Request a Recommendation', content);
+            document.getElementById('request-rec-form').addEventListener('submit', (e) => { e.preventDefault(); alert('Recommendation request sent! (Simulation)'); closeModal(); });
+        }
+
+        function renderMyJobsContent() {
+            const wrapper = document.getElementById('my-jobs-content-wrapper');
+            if(!wrapper) return;
+            const savedJobs = [allJobs[1], allJobs[4], allJobs[9]];
+            const appliedJobs = [allJobs[0], allJobs[7]];
+            const interviews = [allJobs[3]];
+
+            wrapper.innerHTML = `
+                <header class="sticky top-0 bg-white z-10 pt-4 -mx-4 px-4 pb-3 border-b"><h1 class="text-2xl font-bold text-primary">My Jobs</h1></header>
+                <div class="pt-4">
+                    <div class="flex border-b mb-4">
+                        <button class="my-jobs-tab-item active flex-1 p-3 font-semibold" data-tab="saved">Saved (${savedJobs.length})</button>
+                        <button class="my-jobs-tab-item flex-1 p-3 font-semibold text-gray-500" data-tab="applied">Applied (${appliedJobs.length})</button>
+                        <button class="my-jobs-tab-item flex-1 p-3 font-semibold text-gray-500" data-tab="interviews">Interviews (${interviews.length})</button>
+                    </div>
+                    <div id="saved-jobs-tab" class="my-jobs-tab-content active space-y-4"></div>
+                    <div id="applied-jobs-tab" class="my-jobs-tab-content space-y-4" style="display:none;"></div>
+                    <div id="interviews-jobs-tab" class="my-jobs-tab-content space-y-4" style="display:none;"></div>
+                </div>
+            `;
+            
+            renderTrackedJobs(savedJobs, 'saved-jobs-tab', 'saved');
+            renderTrackedJobs(appliedJobs, 'applied-jobs-tab', 'applied');
+            renderTrackedJobs(interviews, 'interviews-jobs-tab', 'interview');
+
+            document.querySelectorAll('.my-jobs-tab-item').forEach(item => {
+                item.addEventListener('click', e => {
+                    const tabId = e.target.dataset.tab;
+                    document.querySelectorAll('.my-jobs-tab-item').forEach(t => t.classList.remove('active', 'text-secondary'));
+                    e.target.classList.add('active', 'text-secondary');
+                    document.querySelectorAll('.my-jobs-tab-content').forEach(c => c.style.display = 'none');
+                    document.getElementById(`${tabId}-jobs-tab`).style.display = 'block';
+                });
+            });
+        }
+
+        function renderTrackedJobs(jobs, containerId, statusType) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = jobs.length ? '' : '<p class="text-center text-gray-500 py-10">No jobs in this category yet.</p>';
+            jobs.forEach(job => {
+                let statusHTML = '';
+                switch(statusType) {
+                    case 'applied':
+                        statusHTML = `<p class="text-sm text-blue-600 font-semibold flex items-center"><i class="fas fa-paper-plane text-blue-500 mr-2"></i>Status: Applied on 28 Jun</p>`;
+                        break;
+                    case 'interview':
+                        statusHTML = `<p class="text-sm text-green-600 font-bold flex items-center"><i class="fas fa-calendar-check text-green-500 mr-2"></i>Status: Interview on 5 Jul</p>`;
+                        break;
+                    case 'saved':
+                        statusHTML = `<p class="text-sm text-gray-500 font-semibold flex items-center"><i class="fas fa-clock text-gray-400 mr-2"></i>Saved on 29 Jun</p>`;
+                        break;
+                }
+
+                const jobCard = document.createElement('div');
+                jobCard.className = 'p-4 border rounded-lg bg-white shadow-sm cursor-pointer hover:shadow-md transition-all duration-300';
+                jobCard.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="text-lg font-bold text-secondary">${job.title}</h3>
+                            <p class="font-semibold text-gray-700">${job.company}</p>
+                            <p class="text-sm text-gray-500 mb-2">${job.location}</p>
+                        </div>
+                        <i class="fas fa-ellipsis-v text-gray-400"></i>
+                    </div>
+                    <div class="mt-3 pt-3 border-t">
+                        ${statusHTML}
+                    </div>
+                `;
+                jobCard.addEventListener('click', () => openJobDetailsModal(job.id));
+                container.appendChild(jobCard);
+            });
+        }
+
+        function renderMessagesContent() {
+            const wrapper = document.getElementById('messages-content-wrapper');
+            if(!wrapper) return;
+            
+            let messagesHTML = conversations.map(convo => `
+                <div class="p-4 border rounded-lg bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow mb-3" onclick="openChatView(${convo.id})">
+                    <div class="flex justify-between items-center">
+                        <p class="font-bold text-gray-800">${convo.company}</p>
+                        ${convo.unread ? '<span class="w-3 h-3 bg-secondary rounded-full"></span>' : ''}
+                    </div>
+                    <p class="font-semibold text-gray-700">${convo.jobTitle}</p>
+                    <p class="text-sm text-gray-500 truncate">${convo.chat[convo.chat.length - 1].text}</p>
+                </div>
+            `).join('');
+
+            wrapper.innerHTML = `
+                <header class="sticky top-0 bg-white z-10 pt-4 -mx-4 px-4 pb-3 border-b"><h1 class="text-2xl font-bold text-primary">Messages</h1></header>
+                <div class="pt-4" id="message-list">
+                    ${messagesHTML}
+                </div>
+            `;
+        }
+        
+        function openChatView(conversationId) {
+            const mainContent = document.getElementById('main-content');
+            const conversation = conversations.find(c => c.id === conversationId);
+            if (!conversation) return;
+
+            conversation.unread = false;
+
+            let chatHTML = conversation.chat.map(msg => {
+                if (msg.sender === 'company') {
+                    return `
+                        <div class="flex justify-start items-end mb-4">
+                            <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary font-bold mr-3 flex-shrink-0">${conversation.company.charAt(0)}</div>
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">${conversation.company} · ${msg.timestamp}</p>
+                                <div class="bg-gray-100 p-3 rounded-lg rounded-bl-none max-w-xs lg:max-w-md">
+                                    <p class="text-sm text-gray-800">${msg.text}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else { // sender is 'user'
+                    return `
+                        <div class="flex justify-end items-end mb-4">
+                             <div>
+                                <p class="text-xs text-gray-500 mb-1 text-right">You · ${msg.timestamp}</p>
+                                <div class="bg-secondary text-white p-3 rounded-lg rounded-br-none max-w-xs lg:max-w-md">
+                                    <p class="text-sm">${msg.text}</p>
+                                </div>
+                            </div>
+                            <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold ml-3 flex-shrink-0">${currentUser.name.charAt(0)}</div>
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            mainContent.innerHTML = `
+                <div id="chat-view-container" class="flex flex-col h-full -m-4">
+                    <!-- Header -->
+                    <div class="flex items-center p-3 border-b sticky top-0 bg-white z-10">
+                        <button onclick="navigateTo('messages-page')" class="p-2 mr-2"><i class="fas fa-arrow-left text-xl"></i></button>
+                        <div>
+                            <h2 class="font-bold text-gray-800">${conversation.company}</h2>
+                            <p class="text-sm text-gray-500">${conversation.jobTitle}</p>
+                        </div>
+                    </div>
+
+                    <!-- Chat Body -->
+                    <div id="chat-body" class="flex-grow p-4 overflow-y-auto">
+                        ${chatHTML}
+                    </div>
+
+                    <!-- Message Input -->
+                    <div class="p-4 border-t bg-white sticky bottom-0">
+                        <form id="message-form" class="flex items-center">
+                            <input type="text" id="message-input" placeholder="Write your message" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary" autocomplete="off">
+                            <button type="submit" class="ml-3 btn-primary font-bold py-3 px-5 rounded-lg">Send</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            const chatBody = document.getElementById('chat-body');
+            chatBody.scrollTop = chatBody.scrollHeight;
+
+            document.getElementById('message-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                sendMessage(conversationId);
+            });
+        }
+        
+        function sendMessage(conversationId) {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (text === '') return;
+
+            const conversation = conversations.find(c => c.id === conversationId);
+            if (!conversation) return;
+            
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            conversation.chat.push({
+                sender: 'user',
+                text: text,
+                timestamp: timestamp
+            });
+
+            input.value = '';
+            openChatView(conversationId);
+        }
+
+    </script>
+</body>
+</html>
